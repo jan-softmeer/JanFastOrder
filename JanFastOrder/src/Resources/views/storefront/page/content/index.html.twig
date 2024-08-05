@@ -1,0 +1,12 @@
+{% sw_extends '@Storefront/storefront/page/content/index.html.twig' %}
+
+{% block base_navigation_inner %}
+    {{ parent() }}
+
+    <a class="nav-link main-navigation-link home-link" href="/fastorder" itemprop="url" title="Fast Order">
+        <div class="main-navigation-link-text">
+            <span itemprop="name">Fast Order</span>
+        </div>
+    </a>
+
+{% endblock %}
