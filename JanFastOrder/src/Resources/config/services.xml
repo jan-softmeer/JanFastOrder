@@ -7,12 +7,29 @@
     <services>
         <defaults public="false"/>
 
+        <service id="JanFastOrder\DemoDataService" public="true">
+            <argument type="service" id="Shopware\Core\Framework\Api\Controller\SyncController"/>
+            <argument type="tagged" tag="jan.demo_data.data_provider" />
+            <argument type="service" id="request_stack" />
+        </service>
+
         <service id="JanFastOrder\Command\ExampleCommand">
             <tag name="console.command"/>
         </service>
 
         <service id="JanFastOrder\ScheduledTask\ExampleTask">
             <tag name="shopware.scheduled.task"/>
+        </service>
+
+        <service id="JanFastOrder\DataProvider\MediaProvider">
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+            <argument type="service" id="Shopware\Core\Content\Media\File\FileSaver"/>
+
+            <tag name="jan.demo_data.data_provider" priority="1100" />
+        </service>
+
+        <service id="JanFastOrder\Subscriber\NavigationSubscriber">
+            <tag name="kernel.event_subscriber" />
         </service>
 
         <service id="JanFastOrder\Subscriber\MySubscriber">
@@ -22,7 +39,10 @@
         <service id="JanFastOrder\Storefront\Controller\FastOrderController" public="true">
             <argument type="service" id="Shopware\Core\Checkout\Cart\LineItemFactoryRegistry"/>
             <argument type="service" id="Shopware\Core\Checkout\Cart\SalesChannel\CartService"/>
+            <argument type="service" id="JanFastOrder\Repository\GetAllActiveAndAvailableProducts"/>
             <argument type="service" id="JanFastOrder\Repository\AddedItemsRepository"/>
+            <argument type="service" id="media.repository"/>
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
 
             <call method="setContainer">
                 <argument type="service" id="service_container"/>
@@ -32,9 +52,27 @@
             </call>
         </service>
 
+        <service id="JanFastOrder\DataProvider\CategoryProvider">
+            <argument type="service" id="category.repository"/>
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+
+            <tag name="jan.demo_data.data_provider" priority="900" />
+        </service>
+
+        <service id="JanFastOrder\Repository\GetAllActiveAndAvailableProducts" public="true">
+             <argument type="service" id="product.repository"/>
+        </service>
+
+        <service id="JanFastOrder\DataProvider\ProductProvider">
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
+            
+            <tag name="jan.demo_data.data_provider" priority="400" />
+        </service>
+
         <service id="JanFastOrder\Repository\AddedItemsRepository">
             <argument type="service" id="Doctrine\DBAL\Connection"/>
         </service>
+
 
         <service id="JanFastOrder\Core\Content\Example\SalesChannel\ExampleRoute">
             <argument type="service" id="product.repository"/>

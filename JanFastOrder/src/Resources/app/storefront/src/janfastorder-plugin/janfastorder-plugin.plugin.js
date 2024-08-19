@@ -8,54 +8,63 @@ export default class JanFastOrderPlugin extends Plugin {
     static activeIndex = -1;
     static mainPrice = 0;
     static totalPrice = 0;
+    static amountSearchArticleInputs = 0;
+    static currentFocusedInput;
 
     init() {
         JanFastOrderPlugin.currencySymbol = JSON.parse(this.el.dataset.janfastorderPluginCurrencySymbol);
-        document.querySelectorAll(".row-fast-order.show-price .main-prices span.symbol").forEach(symbol => {
-            symbol.innerText = JanFastOrderPlugin.currencySymbol
-        })
-        document.querySelectorAll(".row-fast-order.show-price .main-prices span.price").forEach(price => {
-            price.innerText = JanFastOrderPlugin.mainPrice.toFixed(2)
-        }) 
-        document.querySelector("#total-price span.symbol").innerText = JanFastOrderPlugin.currencySymbol
-        document.querySelector("#total-price span.price").innerText = JanFastOrderPlugin.totalPrice.toFixed(2)
 
-        JanFastOrderPlugin.products = JSON.parse(this.el.dataset.janfastorderPluginOptions);
+        document.querySelector("#total-price span.symbol").innerText = JanFastOrderPlugin.currencySymbol;
+        document.querySelector("#total-price span.price").innerText = JanFastOrderPlugin.totalPrice.toFixed(2);
+        
         JanFastOrderPlugin.divResults = document.querySelector("div.search-articles-results");
-
-        document.querySelectorAll("input.search-articles").forEach(inputSearchArticle => {
-            inputSearchArticle.addEventListener("focus", (event) => this.onFocus(event, inputSearchArticle))
-            inputSearchArticle.addEventListener("input", (event) => this.searchArticle(event, inputSearchArticle))
-            inputSearchArticle.addEventListener("blur", () => this.closeResultDiv())
-            inputSearchArticle.addEventListener("keydown", (event) => this.onKeyDown(event, inputSearchArticle))
+        JanFastOrderPlugin.products = JSON.parse(JSON.parse(this.el.dataset.janfastorderPluginOptions));
+        
+        document.querySelector(".add-more-inputs").addEventListener("click", () => {
+            this.addMoreInputs(1);
         })
 
-        document.querySelectorAll("input.enter-quantity").forEach(inputEnterQuantity => {
-            inputEnterQuantity.addEventListener("input", (event) => this.updatePrice())
-        })
+        this.addMoreInputs(3);
 
-        document.querySelector("#submit-fast-order").addEventListener("submit", (event) => this.formSubmit(event))
+        document.querySelector("#submit-fast-order").addEventListener("submit", (event) => this.formSubmit(event));
+
+
+        JanFastOrderPlugin.csvFileInput = document.getElementById('csvFileInput');
+
+        document.getElementById('upload-csv').addEventListener('click', () => JanFastOrderPlugin.csvFileInput.click());
+        JanFastOrderPlugin.csvFileInput.addEventListener('change', (event) => {this.handleFileSelect(event)});
+
+
+
+        // close Result Div 
+        document.addEventListener('click', (event) => {
+            const clickedInsideSearch = Array.from(document.querySelectorAll(".search-articles")).some(element => element.contains(event.target));
+
+            if (!JanFastOrderPlugin.divResults.contains(event.target) && !clickedInsideSearch) {
+                this.closeResultDiv();
+            }
+        });
     }
 
     searchArticle(event, inputSearchArticle, needToSetPriceToZero = true) {
-        const query = inputSearchArticle.value;
-        const matchingProducts = JanFastOrderPlugin.products.filter(product =>
-            product.id.includes(query)
-        );
+        const valueInputSearchArticle = inputSearchArticle.value;
 
+        const matchingProducts = Object.values(JanFastOrderPlugin.products).filter(product => 
+            product.productNumber.toUpperCase().includes(valueInputSearchArticle.toUpperCase()) ||
+            (product.name && product.name.toUpperCase().includes(valueInputSearchArticle.toUpperCase()))
+        );
+        
         this.displayResults(matchingProducts);
 
-
         if(needToSetPriceToZero) {
-            inputSearchArticle.dataset.price = 0;
+            inputSearchArticle.dataset.id = "";
+            inputSearchArticle.dataset.price = "";
         }
 
         this.updatePrice();
     }
 
     displayResults(products) {
-        console.log(products);
-
         const resultsContainer = JanFastOrderPlugin.divResults;
         resultsContainer.innerHTML = ""; // Clear previous results
         JanFastOrderPlugin.activeIndex = -1;
@@ -72,9 +81,41 @@ export default class JanFastOrderPlugin extends Plugin {
             productElement.classList.add("result-item");
             productElement.dataset.index = index;
             productElement.dataset.id = product.id;
-            productElement.dataset.price = product.price;
-            productElement.dataset.stack = product.stack;
-            productElement.innerHTML = `<p>${product.name} - ${product.id} - Stack: ${product.stack}</p>`;
+            productElement.dataset.productNumber = product.productNumber;
+            productElement.dataset.price = product.grossPrice;
+            productElement.dataset.stock = product.availableStock;
+
+
+            let productElement_innerHTML = ''
+
+            productElement_innerHTML = `
+                <div>
+                    <img src="${product.mediaUrl}" alt="Product Img" />
+                </div>
+                <div>
+                    <p><b>${product.name}</b></p>
+                    <p><small>Product number: ${product.productNumber}</small></p>
+                    <p class="price">€ ${product.grossPrice}</p>
+
+                    ${  
+                        product.shippingFree? `
+                            <div class="container-free-shipping">
+                                <p class="point"></p>
+                                <p>Free shipping</p>
+                            </div>` : ``
+                    }
+
+                </div>`;
+
+
+            productElement.innerHTML = productElement_innerHTML;
+
+            productElement.addEventListener("click", () => {
+                const items = resultsContainer.querySelectorAll(".result-item");
+
+                JanFastOrderPlugin.activeIndex = productElement.dataset.index;
+                this.enterProductIntoInput(items, JanFastOrderPlugin.currentFocusedInput);
+            })
 
             resultsContainer.appendChild(productElement);
         });
@@ -84,17 +125,21 @@ export default class JanFastOrderPlugin extends Plugin {
         const resultsContainer = JanFastOrderPlugin.divResults;
         resultsContainer.classList.add("show");
 
-        this.searchArticle(event, inputSearchArticle, false)
+        this.searchArticle(event, inputSearchArticle, false);
+
+        JanFastOrderPlugin.currentFocusedInput = inputSearchArticle;
 
         const inputRect = inputSearchArticle.getBoundingClientRect();
 
-        resultsContainer.style.top = `${inputRect.bottom + window.scrollY}px`;
+        resultsContainer.style.top = `${inputRect.bottom + window.scrollY - 3}px`;
         resultsContainer.style.left = `${inputRect.left + window.scrollX}px`;
         resultsContainer.style.width = `${inputRect.width}px`;
     }
 
     closeResultDiv() {
         const resultsContainer = JanFastOrderPlugin.divResults;
+
+        JanFastOrderPlugin.currentFocusedInput = "";
 
         resultsContainer.classList.remove("show");
         resultsContainer.innerHTML = "";
@@ -113,30 +158,34 @@ export default class JanFastOrderPlugin extends Plugin {
             this.updateActiveItem(items);
 
         } else if (event.key === "Enter") {
+            event.preventDefault();
+            this.enterProductIntoInput(items, inputSearchArticle);
+        }
+    }
 
-            event.preventDefault()
+    enterProductIntoInput(items, inputSearchArticle) {
+        this.closeResultDiv();
 
-            if (JanFastOrderPlugin.activeIndex >= 0 && JanFastOrderPlugin.activeIndex < items.length) {
+        if (JanFastOrderPlugin.activeIndex >= 0 && JanFastOrderPlugin.activeIndex < items.length) {
 
-                const selectedItem = items[JanFastOrderPlugin.activeIndex];
-                const productId = selectedItem.dataset.id;
-                inputSearchArticle.dataset.id = productId;
-                inputSearchArticle.dataset.price = selectedItem.dataset.price;
-                inputSearchArticle.value = productId;
+            const selectedItem = items[JanFastOrderPlugin.activeIndex];
+            const productId = selectedItem.dataset.id;
+            inputSearchArticle.dataset.id = productId;
+            inputSearchArticle.dataset.price = selectedItem.dataset.price;
+            inputSearchArticle.value = selectedItem.dataset.productNumber;
 
-                
-                const enterQuantity = document.querySelector("#" + inputSearchArticle.dataset.idEnterQuantity)
-                if(enterQuantity) {
-                    if(!enterQuantity.value || enterQuantity.value == 0) {
-                        enterQuantity.value = 1
-                    }
-
-                    enterQuantity.max = selectedItem.dataset.stack
+            
+            const enterQuantity = document.querySelector("#" + inputSearchArticle.dataset.idEnterQuantity)
+            if(enterQuantity) {
+                if(!enterQuantity.value || enterQuantity.value == 0) {
+                    enterQuantity.value = 1;
                 }
-                
-                this.updatePrice();
-                this.closeResultDiv();
+
+                enterQuantity.max = selectedItem.dataset.stock;
             }
+            
+            this.updatePrice();
+            this.closeResultDiv();
         }
     }
 
@@ -157,6 +206,7 @@ export default class JanFastOrderPlugin extends Plugin {
             const containerMainPrice = document.querySelector("#" + inputSearchArticle.dataset.idContainerMainPrice);
             const enterQuantity = document.querySelector("#" + inputSearchArticle.dataset.idEnterQuantity);
             const spanPrice = containerMainPrice.querySelector(".price");
+
             if(!containerMainPrice || !spanPrice || !enterQuantity) {
                 return
             }
@@ -180,6 +230,61 @@ export default class JanFastOrderPlugin extends Plugin {
         document.querySelector("#total-price span.price").innerText = JanFastOrderPlugin.totalPrice.toFixed(2);
     }
 
+    addMoreInputs(amount = 1, product, quantity = "") {
+        const container_allInputsSearchArticle = document.querySelector(".all-inputs-search-article");
+
+        let amountSearchArticleInputs = JanFastOrderPlugin.amountSearchArticleInputs;
+
+        if(container_allInputsSearchArticle) {
+            for(let i = amountSearchArticleInputs; (amountSearchArticleInputs + amount) > i; i++) {
+                
+                const div_rowFastOrder = document.createElement("div");
+                div_rowFastOrder.classList.add("row-fast-order");
+                div_rowFastOrder.innerHTML = `
+                    <div class="div-search-articles">
+                        <input type="text" id='search-article${i}' name='search-article${i}' 
+                            class="form-control search-articles" placeholder="Search article..."
+                            data-id-enter-quantity='enter-quantity${i}' 
+                            data-id-container-main-price='container-main-price${i}' 
+                            ${product? 'data-id="' +product.id+ '" data-price="' +product.grossPrice+ '" value="'+ product.productNumber +'"' : ''} />
+                    </div>
+                    <div class="div-enter-quantity">
+                        <input type="number" id='enter-quantity${i}' name='enter-quantity${i}' class="form-control enter-quantity" ${product? 'value="'+ quantity +'"' : ''} min="0" step="1" max="${product? product.availableStock : '100'}" placeholder="Quantity">
+                    </div>
+                `;
+    
+                const div_rowFastOrder_showPrice = document.createElement("div");
+                div_rowFastOrder_showPrice.id= 'container-main-price' + i;
+                div_rowFastOrder_showPrice.classList.add("row-fast-order", "show-price");
+                div_rowFastOrder_showPrice.innerHTML = `
+                    <p class="small"><b>Main product</b></p>
+                    <div class="main-prices">
+                        <span class="symbol"></span><span class="price"></span>
+                    </div>
+                `;
+
+                container_allInputsSearchArticle.appendChild(div_rowFastOrder);
+                container_allInputsSearchArticle.appendChild(div_rowFastOrder_showPrice);
+
+                setTimeout(() => {
+                    const inputSearchArticle = div_rowFastOrder.querySelector("input.search-articles");
+                    inputSearchArticle.addEventListener("focus", (event) => this.onFocus(event, inputSearchArticle));
+                    inputSearchArticle.addEventListener("input", (event) => this.searchArticle(event, inputSearchArticle));
+                    // inputSearchArticle.addEventListener("blur", () => this.closeResultDiv());
+                    inputSearchArticle.addEventListener("keydown", (event) => this.onKeyDown(event, inputSearchArticle));
+                    
+                    const inputEnterQuantity = div_rowFastOrder.querySelector("input.enter-quantity");
+                    inputEnterQuantity.addEventListener("input", (event) => this.updatePrice());
+
+                    div_rowFastOrder_showPrice.querySelector(".main-prices span.symbol").innerText = JanFastOrderPlugin.currencySymbol;
+                }, 10)
+
+
+                JanFastOrderPlugin.amountSearchArticleInputs++;
+            }
+        }
+    }
+
     formSubmit(event) {
         event.preventDefault();
         
@@ -188,55 +293,112 @@ export default class JanFastOrderPlugin extends Plugin {
 
 
         const articlesQuantities = {};
+        let isSaveable = true;
+
+        console.log(JanFastOrderPlugin.products);
+        
 
         for (let [key, value] of formData.entries()) {
 
             if (key.startsWith('search-article')) {
+
                 const index = key.replace('search-article', '');
                 const quantityKey = `enter-quantity${index}`;
                 const quantity = formData.get(quantityKey);
 
                 if (value && quantity) {
-                    if(articlesQuantities[value] != undefined) {
-                        articlesQuantities[value] += Number(quantity)
+                    const input = document.getElementById(key)
+                    const productId = input.dataset.id
+
+                    const filtered_products = JanFastOrderPlugin.products.filter(product => product.id == productId);
+                    if(filtered_products.length == 0) {
+                        alert("Product with Product-number '"+ input.value.trim() +"' doesnt exist");
+                        isSaveable = false;
 
                     } else {
-                        articlesQuantities[value] = Number(quantity);
+                        
+                        if(articlesQuantities[productId] != undefined) {
+                            articlesQuantities[productId] += Number(quantity)
+                            
+                        } else {
+                            articlesQuantities[productId] = Number(quantity);
+                        }
+                        
+                        const product = filtered_products[0];
+                        if(product.availableStock < articlesQuantities[productId]) {
+                            alert("Product with Product-number '"+ input.value.trim() +"' has "+ product.availableStock +" in stock. (You entered more)");
+                            isSaveable = false;
+                        }
                     }
                 }
             }
         }
 
 
-        // here first verify that no article is langer than stack
+        if(isSaveable) {
+            fetch('/fastorder/submit-xml', {
+                method: 'POST',
+                body: JSON.stringify(articlesQuantities),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+                //TODO add CSRF-Token
+            })
+            .then(response => response.json())
+            .then(data => {
+    
+                if (data.success) {
+                    window.location.href = '/checkout/cart';
+    
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
 
 
-        fetch('/fastorder/submit-xml', {
-            method: 'POST',
-            body: JSON.stringify(articlesQuantities),
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+    
+        const reader = new FileReader();
+        reader.onload = (fileEvent) => {
+            const lines = fileEvent.target.result.split('\n');
 
-            //TODO add CSRF-Token
-        })
-        .then(response => response.json())
-        .then(data => {
+            lines.forEach((line) => {
+                let [productNumber, quantity] = line.split(';');
+                
+                if(productNumber && quantity) {
+                    productNumber = productNumber.trim();
+                    quantity = Number(quantity.trim());
+    
+                    if (productNumber && quantity > 0) {
+                        const productArray = JanFastOrderPlugin.products.filter(product => product.productNumber == productNumber);
 
-            console.log(data);
+                        if(productArray.length > 0) {
+                            const product = productArray[0];
 
-            if (data.success) {
-                // Handle success (e.g., show a success message or redirect)
-                console.log('Order added to cart successfully!');
+                            if(product.availableStock < quantity) {
+                                quantity = product.availableStock;
+                            }
 
-                window.location.href = '/checkout/cart';
+                            this.addMoreInputs(1, product, quantity);
+                        }
+                    }
 
-            } else {
-                // Handle validation errors
-                alert('There were errors with your submission.');
-            }
-        })
-        .catch(error => console.error('Error:', error));
+                    this.updatePrice();
+                }
+            });
+        };
+
+        reader.readAsText(file);
+
+
+        JanFastOrderPlugin.csvFileInput.value = '';
     }
 }

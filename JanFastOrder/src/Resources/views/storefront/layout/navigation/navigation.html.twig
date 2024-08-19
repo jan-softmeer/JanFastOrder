@@ -1,0 +1,17 @@
+{# JanFastOrder/src/Resources/views/storefront/layout/navigation/navigation.html.twig #}
+
+{% sw_extends '@Storefront/storefront/layout/navigation/navigation.html.twig' %}
+
+{% block layout_main_navigation_menu_home %}
+    {{ parent() }}
+
+    <a class="nav-link main-navigation-link {% if controllerAction is same as('showFastOrder') %} active{% endif %} home-link"
+        href="{{ path('jan.fastorder.show') }}"
+        itemprop="url"
+        title="Fast Order">
+        <div class="main-navigation-link-text">
+            <span itemprop="name">Fast Order</span>
+        </div>
+    </a>
+
+{% endblock %}

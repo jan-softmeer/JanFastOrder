@@ -14,12 +14,12 @@ class AddedItemsRepository
         $this->connection = $connection;
     }
 
-    public function addItem(string $session_id, string $articleId, int $quantity, float $price): void
+    public function addItem(string $session_id, string $productNumber, int $quantity, float $price): void
     {
-        $this->connection->insert('added_items', [
+        $this->connection->insert('added_products_from_fastorder', [
             'id' => Uuid::randomBytes(),
             'session_id' => $session_id,
-            'article_id' => $articleId,
+            'product_number' => $productNumber,
             'quantity' => $quantity,
             'price' => $price,
             'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),

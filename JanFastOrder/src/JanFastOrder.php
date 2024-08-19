@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+
 namespace JanFastOrder;
 
 use Shopware\Core\Framework\Plugin;
@@ -35,13 +36,17 @@ class JanFastOrder extends Plugin
         // Activate entities, such as a new payment method
         // Or create new entities here, because now your plugin is installed and active for sure
 
-        // $this->getCustomFieldsInstaller()->addRelations($activateContext->getContext());
+        // @phpstan-ignore-next-line
+        $this->container->get(DemoDataService::class)->generate($activateContext->getContext());
     }
 
     public function deactivate(DeactivateContext $deactivateContext): void
     {
         // Deactivate entities, such as a new payment method
         // Or remove previously created entities
+
+        // @phpstan-ignore-next-line
+        $this->container->get(DemoDataService::class)->delete($deactivateContext->getContext());
     }
 
     public function update(UpdateContext $updateContext): void

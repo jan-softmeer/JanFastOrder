@@ -19,58 +19,108 @@ use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Checkout\Cart\LineItemFactoryRegistry;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
 use JanFastOrder\Repository\AddedItemsRepository;
+use JanFastOrder\Repository\GetAllActiveAndAvailableProducts;
+use Shopware\Core\Content\Product\ProductEntity;
+use Shopware\Core\System\Currency\CurrencyEntity;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
+use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 
 
 #[Route(defaults: ['_routeScope' => ['storefront']])]
 class FastOrderController extends StorefrontController
 {
 
-    private $exampleProducts;
     private LineItemFactoryRegistry $factory;
     private CartService $cartService;
+    private GetAllActiveAndAvailableProducts $getAllActiveProducts;
     private AddedItemsRepository $addedItemsRepository;
+    private $allActiveProducts;
+    private $allProductsForStoreFront;
+    private EntityRepository $mediaRepository;
+    private SystemConfigService $systemConfigService;
 
 
-    public function __construct(LineItemFactoryRegistry $factory, CartService $cartService, AddedItemsRepository $addedItemsRepository)
+    public function __construct(LineItemFactoryRegistry $factory, CartService $cartService, GetAllActiveAndAvailableProducts $getAllActiveProducts, AddedItemsRepository $addedItemsRepository, EntityRepository $mediaRepository, SystemConfigService $systemConfigService)
     {
-        $this->exampleProducts = [
-            ["name" => "Product 1", "id" => "01912165990f73338fc7c873be69747d", "stack" => 10, "price" => 10.00],
-            ["name" => "Product 2", "id" => "01912164e9777333a7214c1ae8f66fed", "stack" => 20, "price" => 10.40],
-            ["name" => "Product 3", "id" => "0191216520e7737c8162602cbcbd34b8", "stack" => 5, "price" => 8.99],
-            ["name" => "Product 4", "id" => "01912165990f73338fc7c873ba0cff3b", "stack" => 8, "price" => 14.99],
-            ["name" => "Product 5", "id" => "01912165990f73338fc7c873ba9c0762", "stack" => 12, "price" => 209.00],
-            ["name" => "Product 6", "id" => "01912165990f73338fc7c873bb2f0f34", "stack" => 10, "price" => 101.00],
-            ["name" => "Product 7", "id" => "01912165990f73338fc7c873bb693e41", "stack" => 10, "price" => 310.00],
-            ["name" => "Product 8", "id" => "01912165990f73338fc7c873bb693e40", "stack" => 10, "price" => 210.00],
-            ["name" => "Product 9", "id" => "01912165990f73338fc7c873bbab7d63", "stack" => 10, "price" => 510.00],
-            ["name" => "Product 10", "id" => "01912165990f73338fc7c873bc0a1189", "stack" => 10, "price" => 90.49],
-            ["name" => "Product 11", "id" => "01912165990f73338fc7c873bd00502e", "stack" => 10, "price" => 10.28],
-            ["name" => "Product 12", "id" => "01912165990f73338fc7c873bd09de70", "stack" => 10, "price" => 10.10],
-            ["name" => "Product 13", "id" => "01912165990f73338fc7c873bd972777", "stack" => 10, "price" => 10.70],
-            ["name" => "Product 14", "id" => "01912165990f73338fc7c873bde34b5c", "stack" => 10, "price" => 19.00],
-        ];
-
         $this->factory = $factory;
         $this->cartService = $cartService;
+        $this->getAllActiveAndAvailableProducts = $getAllActiveProducts;
         $this->addedItemsRepository = $addedItemsRepository;
+        $this->allActiveProducts = $this->getAllActiveAndAvailableProducts->getAllActiveAndAvailableProducts();
+        $this->mediaRepository = $mediaRepository;
+        $this->systemConfigService = $systemConfigService;
+
+        $all_products_for_storefront = [];
+        foreach($this->allActiveProducts as $product) {
+
+            if($product["childCount"] === null) { // Product is Child
+
+                $parentProductNumber = strstr($product["productNumber"], '.', true);
+
+                $parent = $this->getProductOfAllActiveAndAvaibleProductsByProductNumber($parentProductNumber);
+                if($parent !== null) {
+
+                    $productName = $parent["name"];
+
+                    $pricesCollection = $parent["price"];
+                    if($pricesCollection !== null) {
+                        $grossPrice = $pricesCollection->first()->getGross();
+                    }
+
+                    $media_url = $this->getProductMediaUrlUrl($parent["media"]);
+                }
+
+            } 
+            
+            else {
+
+                $productName = $product["name"];
+
+                $pricesCollection = $product["price"];
+                if($pricesCollection !== null) {
+                    $grossPrice = $pricesCollection->first()->getGross();
+                }
+
+                $media_url = $this->getProductMediaUrlUrl($product["media"]);
+            }
+
+
+            if(!isset($productName) || !isset($grossPrice) || $product["childCount"] > 0) { // if is Parent or doesnt have name / price => continue
+                continue;
+            }
+
+
+            $product_to_add = [];
+
+            $product_to_add["id"] = $product["id"];
+            $product_to_add["productNumber"] = $product["productNumber"];
+            $product_to_add["name"] = $productName;
+            $product_to_add["grossPrice"] = $grossPrice;
+            $product_to_add["availableStock"] = $product["availableStock"];
+            $product_to_add["shippingFree"] = $product["shippingFree"];
+            $product_to_add["mediaUrl"] = $media_url;
+
+            $all_products_for_storefront[] = $product_to_add;
+        }
+
+        // sort by productNumber ASC
+        usort($all_products_for_storefront, function ($a, $b) {
+            return strcmp($a['productNumber'], $b['productNumber']);
+        });
+
+        $this->allProductsForStoreFront = $all_products_for_storefront;
     }
 
-    #[Route(
-        path: '/fastorder',
-        name: 'jan.fastorder.show',
-        methods: ['GET']
-    )]
+    
+    #[Route(path: '/fastorder', name: 'jan.fastorder.show', methods: ['GET'])]
     public function showFastOrder(Request $request, SalesChannelContext $context): Response
     {
-        return $this->renderStorefront('@JanFastOrder/storefront/page/fastorder.html.twig', ["exampleProducts" => $this->exampleProducts]);
+        $note = $this->systemConfigService->get('JanFastOrder.config.textField') ?? '';
+        return $this->renderStorefront('@JanFastOrder/storefront/page/fastorder.html.twig', ["allProductsForStoreFront" => json_encode($this->allProductsForStoreFront), "note" => $note]);
     }
 
-    #[Route(
-        path: '/fastorder/submit-xml',
-        name: 'jan.fastorder.submit_xml',
-        methods: ['POST'],
-        defaults: ['XmlHttpRequest' => 'true']
-    )]
+    #[Route(path: '/fastorder/submit-xml', name: 'jan.fastorder.submit_xml', methods: ['POST'], defaults: ['XmlHttpRequest' => 'true'])]
     public function submitFastOrderXmlHttpRequest(Request $request, SalesChannelContext $context): Response
     {
         $data = json_decode($request->getContent(), true);
@@ -89,17 +139,17 @@ class FastOrderController extends StorefrontController
             }
 
             $lineItem = $this->factory->create([
-                'type' => LineItem::PRODUCT_LINE_ITEM_TYPE, // Results in 'product'
-                'referencedId' => $articleId, // this is not a valid UUID, change this to your actual ID!
+                'type' => LineItem::PRODUCT_LINE_ITEM_TYPE,
+                'referencedId' => $articleId,
                 'quantity' => $quantity,
                 'payload' => []
             ], $context);
-
-            $lineItem->setPrice($this->getProductPrice($articleId, $context));
     
-            $this->cartService->add($cart, $lineItem, $context); // shopping cart is still empty
+            $this->cartService->add($cart, $lineItem, $context);
 
-            $this->addedItemsRepository->addItem($sessionId, $articleId, $quantity, $this->getExampleProductsProductById($articleId)["price"]);
+            $product = $this->getProductOfStoreFrontById($articleId);
+
+            $this->addedItemsRepository->addItem($sessionId, $product["productNumber"], $quantity, $product["grossPrice"]);
         }
 
         $this->cartService->recalculate($cart, $context);
@@ -107,16 +157,18 @@ class FastOrderController extends StorefrontController
         return new JsonResponse(['success' => true]);
     }
 
+    
+
 
     private function isArticleAvailable(string $articleId, int $quantity): bool
     {
-        $product = $this->getExampleProductsProductById($articleId);
-        return $product && $product != null && $product["stack"] >= $quantity;
+        $product = $this->getProductOfStoreFrontById($articleId);
+        return $product && $product != null && $product["availableStock"] >= $quantity;
     }
 
-    private function getExampleProductsProductById($id)
+    private function getProductOfStoreFrontById($id)
     {
-        foreach ($this->exampleProducts as $product) {
+        foreach ($this->allProductsForStoreFront as $product) {
             if ($product['id'] === $id) {
                 return $product;
             }
@@ -125,27 +177,25 @@ class FastOrderController extends StorefrontController
         return null;
     }
 
-    private function getProductPrice(string $articleId, SalesChannelContext $context): CalculatedPrice
+    private function getProductOfAllActiveAndAvaibleProductsByProductNumber($productNumber)
     {
-        $product = $this->getExampleProductsProductById($articleId);
-        if(!$product) {
-            throw new \Exception('Product not found');
+        foreach ($this->allActiveProducts as $product) {
+            if ($product['productNumber'] === $productNumber) {
+                return $product;
+            }
         }
 
-        $grossPrice = $product["price"];
-        $taxAmount = $grossPrice * 0.19; // 19% VAT
+        return null;
+    }
 
-        $taxCollection = new CalculatedTaxCollection([
-            new CalculatedTax($taxAmount, 19, $grossPrice)
-        ]);
+    private function getProductMediaUrlUrl($product_media) 
+    {
+        $firstMediaEntity = $product_media->getMedia()->first();
 
-        $calculatedPrice = new CalculatedPrice(
-            $grossPrice, // Net price
-            $grossPrice, // Gross price
-            $taxCollection,
-            new TaxRuleCollection()
-        );
+        if ($firstMediaEntity instanceof \Shopware\Core\Content\Media\MediaEntity) {
+            return $firstMediaEntity->getUrl();
+        }
 
-        return $calculatedPrice;
+        return "";
     }
 }

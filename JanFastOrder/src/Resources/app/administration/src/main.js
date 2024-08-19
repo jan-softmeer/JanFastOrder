@@ -1,2 +1,1 @@
-// Import admin module
-import './module/swag-example';
+import './module/show-all-jan-fast-order';

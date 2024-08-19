@@ -1,5 +1,5 @@
 $green-blue-color: #008692;
-$lightgrey: #d3d3d3;;
+$lightgrey: #798490;
 
 div.main-fast-order {
     padding: 10px 50px;
@@ -24,7 +24,7 @@ div.main-fast-order {
 
 
         .next-to-eachother {
-            border-bottom: 3px solid $lightgrey;
+            border-bottom: 2px solid #79849080;
             padding-bottom: 3px;
             cursor: pointer;
         }
@@ -75,32 +75,75 @@ div.main-fast-order {
         display: none;
     
         position: absolute;
-        background: lightgray;
+        background: white;
         
         overflow: auto;
-        max-height: 200px;
+        max-height: 450px;
     
-        border: 1px solid black;
+        border: 1px solid $lightgrey;
         border-top: 0;
+
+        padding-top: 3px;
+
+
+        p {
+            margin: 0;
+        }
+
+        div.result-item {
+            padding: 10px;    
+            display: flex;
+            gap: 10px;
+
+
+            p.price {
+                margin: 5px 0;
+            }
+
+            img {
+                min-height: 80px;
+                max-height: 80px;
+                min-width: 80px;
+                max-width: 80px;
+                border: 1px solid $lightgrey;
+                border-radius: 5px;
+                box-shadow: 0 0 1px $lightgrey;
+            }
+        }
+
+        div.result-item {
+            border-top: 3px solid $lightgrey;
+        } 
+
+        div.result-item.active,
+        div.result-item:hover {
+            background: #636363;
+            color: white;
+            font-weight: bolder;
+            cursor: pointer;
+        }
+
+        .container-free-shipping {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            .point {
+                background: $green-blue-color;
+                width: 10px;
+                height: 10px;
+                border-radius: 360px;
+            }
+        }
     }
     
     div.search-articles-results.show {
         display: block;
     }
     
-    div.search-articles-results p {
-        margin: 0;
-    }
     
-    .search-articles-results div.result-item {
-        padding: 10px;
-    }
-    .search-articles-results div.result-item.active {
-        background: #636363;
-        color: white;
-        font-weight: bolder;
-        cursor: pointer;
-    }
+    
+    
 
     .form-control {
         border-radius: 5px;
@@ -120,6 +163,27 @@ div.main-fast-order {
         font-weight: bolder;
         font-size: 1.1rem;
     }
+
+    p.add-more-inputs {
+        font-size: 30px;
+        border: 2px solid;
+        font-weight: bolder;
+        border-radius: 20px;
+        
+        height: 40px;
+        width: 40px;
+        
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+
+        cursor: pointer;
+    }
+    p.add-more-inputs:hover {
+        background: $lightgrey;
+        color: white;
+    }
     
     button {
         background: $green-blue-color;
@@ -129,6 +193,22 @@ div.main-fast-order {
         color: white;
         font-weight: bolder;
         margin-top: 10px;
+    }
+    button:hover {
+        opacity: 0.5;
+    }
+
+    input#csvFileInput {
+        display: none;
+    }
+
+    .note {
+        margin: 20px 0;
+    }
+
+    red {
+        color: red;
+        font-weight: bolder;
     }
 }
 
