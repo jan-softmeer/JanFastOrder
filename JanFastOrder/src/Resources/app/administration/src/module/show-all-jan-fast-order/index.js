@@ -14,6 +14,7 @@ Shopware.Module.register('show-all', {
     icon: 'default-package-open',
     title: 'show-all-jan-fast-order.general.showAllFastOrders',
     description: 'show-all-jan-fast-order.general.descriptionShowAllFastOrders',
+    name: 'jan-bundles',
 
     snippets: {
         'de-DE': deDE,
