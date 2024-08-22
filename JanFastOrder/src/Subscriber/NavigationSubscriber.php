@@ -17,8 +17,6 @@ class NavigationSubscriber implements EventSubscriberInterface
 
     public function onSalesChannelContextResolved(SalesChannelContextResolvedEvent $event): void
     {
-        dump('Event fired!');
-
         $navigation = $event->getSalesChannelContext()->getSalesChannel()->getNavigation();
 
         $navigation->addLink([

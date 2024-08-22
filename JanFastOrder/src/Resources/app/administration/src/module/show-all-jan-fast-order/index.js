@@ -1,7 +1,5 @@
-// <plugin root>/src/Resources/app/administration/src/module/show-all-jan-fast-order/index.js
 
-//http://localhost/admin#/show/all/jan/fast/order/list
-
+//TODO: Das Modul wird nicht angezeigt, obwohl keine Fehler auftreten.
 
 import './page/show-all-jan-fast-order-list';
 
@@ -14,7 +12,7 @@ Shopware.Module.register('show-all', {
     icon: 'default-package-open',
     title: 'show-all-jan-fast-order.general.showAllFastOrders',
     description: 'show-all-jan-fast-order.general.descriptionShowAllFastOrders',
-    name: 'jan-bundles',
+    name: 'show-all',
 
     snippets: {
         'de-DE': deDE,

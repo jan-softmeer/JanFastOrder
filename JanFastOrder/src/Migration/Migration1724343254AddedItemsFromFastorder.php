@@ -10,23 +10,24 @@ use Shopware\Core\Framework\Migration\MigrationStep;
  * @internal
  */
 #[Package('core')]
-class Migration1723868880InsertProductsFromFastOrder extends MigrationStep
+class Migration1724343254AddedItemsFromFastorder extends MigrationStep
 {
     public function getCreationTimestamp(): int
     {
-        return 1723868880;
+        return 1724343254;
     }
 
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            CREATE TABLE IF NOT EXISTS `added_products_from_fastorder` (
+            CREATE TABLE IF NOT EXISTS `added_items_from_fastorder` (
                 `id` BINARY(16) NOT NULL,
                 `session_id` VARCHAR(255) NOT NULL,
                 `product_number` VARCHAR(255) NOT NULL,
                 `quantity` INT(11) NOT NULL,
                 `price` DECIMAL(10,2) NOT NULL,
                 `created_at` DATETIME(3) NOT NULL,
+                `updated_at` DATETIME(3) NULL,
                 PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         ');
@@ -35,7 +36,7 @@ class Migration1723868880InsertProductsFromFastOrder extends MigrationStep
     public function updateDestructive(Connection $connection): void
     {
         $connection->executeStatement('
-            DROP TABLE IF EXISTS `added_items_via_fastorder`;
+            DROP TABLE IF EXISTS `added_items_from_fastorder`;
         ');
     }
 }

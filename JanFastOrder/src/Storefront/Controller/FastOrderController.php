@@ -157,9 +157,6 @@ class FastOrderController extends StorefrontController
         return new JsonResponse(['success' => true]);
     }
 
-    
-
-
     private function isArticleAvailable(string $articleId, int $quantity): bool
     {
         $product = $this->getProductOfStoreFrontById($articleId);

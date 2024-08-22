@@ -59,10 +59,6 @@
             <tag name="jan.demo_data.data_provider" priority="900" />
         </service>
 
-        <service id="JanFastOrder\Repository\GetAllActiveAndAvailableProducts" public="true">
-             <argument type="service" id="product.repository"/>
-        </service>
-
         <service id="JanFastOrder\DataProvider\ProductProvider">
             <argument type="service" id="Doctrine\DBAL\Connection"/>
             
@@ -73,6 +69,20 @@
             <argument type="service" id="Doctrine\DBAL\Connection"/>
         </service>
 
+        <service id="JanFastOrder\Core\Content\GetAddedItemsAdminDefinition" public="true">
+            <tag name="shopware.entity.definition"/>
+        </service>
+
+        <service id="JanFastOrder\Controller\GetAddedItemsAdminController">
+            <argument type="service" id="added_items_from_fastorder.repository"/>
+        </service>
+        
+        <service id="JanFastOrder\Repository\GetAllActiveAndAvailableProducts" public="true">
+            <argument type="service" id="product.repository"/>
+        </service>
+
+
+        
 
         <service id="JanFastOrder\Core\Content\Example\SalesChannel\ExampleRoute">
             <argument type="service" id="product.repository"/>

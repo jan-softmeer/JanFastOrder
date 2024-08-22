@@ -8,7 +8,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
-    name: 'swag-commands:example',
+    name: 'jan-commands:example',
     description: 'Add a short description for your command',
 )]
 class ExampleCommand extends Command

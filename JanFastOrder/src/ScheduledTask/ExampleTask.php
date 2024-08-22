@@ -8,7 +8,7 @@ class ExampleTask extends ScheduledTask
 {
     public static function getTaskName(): string
     {
-        return 'swag.example_task';
+        return 'jan.example_task';
     }
 
     public static function getDefaultInterval(): int

@@ -287,6 +287,11 @@ export default class JanFastOrderPlugin extends Plugin {
 
     formSubmit(event) {
         event.preventDefault();
+
+        const submitButton = document.querySelector("#submit-form")
+        if(submitButton) {
+            submitButton.disabled = true;
+        }
         
         const form = document.querySelector("#submit-fast-order");
         const formData = new FormData(form);
@@ -343,19 +348,26 @@ export default class JanFastOrderPlugin extends Plugin {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 }
-                //TODO add CSRF-Token
+                // add CSRF-Token
             })
             .then(response => response.json())
             .then(data => {
-    
                 if (data.success) {
                     window.location.href = '/checkout/cart';
     
                 } else {
                     alert(data.message);
+                    
+                    if(submitButton) {
+                        submitButton.disabled = false;
+                    }
                 }
             })
             .catch(error => console.error('Error:', error));
+        } else {
+            if(submitButton) {
+                submitButton.disabled = false;
+            }
         }
     }
 

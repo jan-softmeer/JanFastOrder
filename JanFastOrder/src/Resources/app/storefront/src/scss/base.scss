@@ -164,6 +164,13 @@ div.main-fast-order {
         font-size: 1.1rem;
     }
 
+    #submit-form:disabled,
+    #submit-form[disabled=true],
+    #submit-form[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed
+    }
+
     p.add-more-inputs {
         font-size: 30px;
         border: 2px solid;

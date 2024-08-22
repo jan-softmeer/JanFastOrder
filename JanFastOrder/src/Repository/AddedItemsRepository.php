@@ -16,13 +16,16 @@ class AddedItemsRepository
 
     public function addItem(string $session_id, string $productNumber, int $quantity, float $price): void
     {
-        $this->connection->insert('added_products_from_fastorder', [
+        $created_at = (new \DateTime())->format('Y-m-d H:i:s');
+
+        $this->connection->insert('added_items_from_fastorder', [
             'id' => Uuid::randomBytes(),
             'session_id' => $session_id,
             'product_number' => $productNumber,
             'quantity' => $quantity,
             'price' => $price,
-            'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+            'created_at' => $created_at,
+            'updated_at' => $created_at,
         ]);
     }
 }
